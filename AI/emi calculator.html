@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMI Calculator — YUKTHI 2026</title>
+    <style>
+        /* CSS Variables based on SRD Color Scheme [cite: 58] */
+        :root {
+            --primary: #1E3A5F;
+            --accent: #2E75B6;
+            --success: #0A7E5C;
+            --warning: #E67E22;
+            --background: #F4F6FA;
+            --card-bg: #FFFFFF;
+            --table-odd: #F5F8FC;
+            --text-primary: #1A1A2E;
+            --text-secondary: #666666;
+            --font-main: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--background);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* Header [cite: 52] */
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--primary);
+        }
+
+        header h1 { margin-bottom: 5px; }
+        header p { color: var(--text-secondary); margin-top: 0; }
+
+        /* Main Layout Grid  */
+        .main-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 768px) {
+            .main-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (min-width: 1024px) {
+            .main-grid { grid-template-columns: 1fr 1.5fr; }
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* Input Panel [cite: 53] */
+        .input-group { margin-bottom: 20px; }
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        input[type="number"] {
+            width: 120px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        /* Tenure Toggle [cite: 19, 67] */
+        .toggle-container {
+            display: flex;
+            background: #eee;
+            border-radius: 6px;
+            padding: 2px;
+            width: fit-content;
+        }
+
+        .toggle-btn {
+            border: none;
+            padding: 5px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            background: transparent;
+        }
+
+        .toggle-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Results Panel [cite: 54, 61] */
+        .emi-card {
+            background: var(--success);
+            color: white;
+            text-align: center;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .emi-value {
+            font-size: 42px;
+            font-weight: bold;
+            display: block;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .summary-tiles {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .tile {
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            border-left: 4px solid var(--accent);
+        }
+
+        .tile.interest { border-color: var(--warning); }
+        .tile-label { font-size: 12px; color: var(--text-secondary); display: block; }
+        .tile-value { font-weight: bold; color: var(--primary); font-size: 18px; }
+
+        /* Pie Chart [cite: 14, 25] */
+        .chart-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        .pie-chart {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        .chart-tooltip {
+            display: none;
+            position: fixed;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* Amortisation Table [cite: 29-35] */
+        .table-section {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 14px;
+            min-width: 600px;
+        }
+
+        th {
+            background: var(--primary);
+            color: white;
+            text-align: left;
+            padding: 12px;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+            font-family: monospace; /* [cite: 64] */
+        }
+
+        tr:nth-child(even) { background: var(--table-odd); }
+        tr.total-row { font-weight: bold; background: #eee !important; }
+
+        /* Toast Notification [cite: 70] */
+        #toast {
+            visibility: hidden;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 12px;
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+
+        #toast.show { visibility: visible; }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>EMI Calculator</h1>
+        <p>Software Requirements Specification — YUKTHI 2026</p>
+    </header>
+
+    <div class="main-grid">
+        <section class="card">
+            <div class="input-group">
+                <div class="label-row">
+                    <span>Loan Amount (₹)</span>
+                    <input type="number" id="amt-val" value="100000" min="10000" max="10000000">
+                </div>
+                <input type="range" id="amt-range" min="10000" max="10000000" step="1000" value="100000">
+            </div>
+
+            <div class="input-group">
+                <div class="label-row">
+                    <span>Interest Rate (%)</span>
+                    <input type="number" id="rate-val" value="12" min="1" max="36" step="0.1">
+                </div>
+                <input type="range" id="rate-range" min="1" max="36" step="0.1" value="12">
+            </div>
+
+            <div class="input-group">
+                <div class="label-row">
+                    <span>Tenure</span>
+                    <input type="number" id="tenure-val" value="24" min="1" max="360">
+                </div>
+                <input type="range" id="tenure-range" min="1" max="360" step="1" value="24">
+                <div class="toggle-container" style="margin-top: 10px;">
+                    <button class="toggle-btn active" id="btn-months">Months</button>
+                    <button class="toggle-btn" id="btn-years">Years</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="emi-card">
+                <button class="copy-btn" onclick="copyEMI()">Copy</button>
+                <span style="font-size: 14px; opacity: 0.9;">Monthly EMI</span>
+                <span class="emi-value" id="emi-display">₹0</span>
+            </div>
+
+            <div class="summary-tiles">
+                <div class="tile">
+                    <span class="tile-label">Principal Amount</span>
+                    <span class="tile-value" id="res-principal">₹0</span>
+                </div>
+                <div class="tile interest">
+                    <span class="tile-label">Total Interest</span>
+                    <span class="tile-value" id="res-interest">₹0</span>
+                </div>
+                <div class="tile" style="grid-column: span 2;">
+                    <span class="tile-label">Total Amount Payable</span>
+                    <span class="tile-value" id="res-total">₹0</span>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <svg class="pie-chart" id="pie-chart" width="180" height="180"></svg>
+                <div class="chart-tooltip" id="chart-tooltip"></div>
+                <div class="chart-legend">
+                    <div class="legend-item"><div class="dot" style="background:var(--accent)"></div> Principal</div>
+                    <div class="legend-item"><div class="dot" style="background:var(--warning)"></div> Interest</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <section class="table-section card">
+        <h3 style="margin-top: 0; color: var(--primary);">Repayment Schedule</h3>
+        <table id="schedule-table">
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th>Opening Balance</th>
+                    <th>EMI</th>
+                    <th>Principal</th>
+                    <th>Interest</th>
+                    <th>Closing Balance</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </section>
+
+    <footer>
+        <p>Formula: EMI = [P x r x (1+r)^n] / [((1+r)^n)-1] [cite: 27]</p>
+        <p>&copy; 2026 YUKTHI Hackathon — Ready for Development Status [cite: 5]</p>
+    </footer>
+</div>
+
+<div id="toast">EMI copied to clipboard!</div>
+
+<script>
+    // State [cite: 67]
+    let tenureUnit = 'months'; // or 'years'
+    const formatter = new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+    });
+
+    // Elements
+    const amtRange = document.getElementById('amt-range');
+    const amtVal = document.getElementById('amt-val');
+    const rateRange = document.getElementById('rate-range');
+    const rateVal = document.getElementById('rate-val');
+    const tenureRange = document.getElementById('tenure-range');
+    const tenureVal = document.getElementById('tenure-val');
+    const btnMonths = document.getElementById('btn-months');
+    const btnYears = document.getElementById('btn-years');
+    const pieChart = document.getElementById('pie-chart');
+    const tooltip = document.getElementById('chart-tooltip');
+
+    // Two-way binding [cite: 66]
+    function sync(range, input, callback) {
+        range.addEventListener('input', () => { input.value = range.value; callback(); });
+        input.addEventListener('input', () => { range.value = input.value; callback(); });
+    }
+
+    sync(amtRange, amtVal, calculate);
+    sync(rateRange, rateVal, calculate);
+    sync(tenureRange, tenureVal, calculate);
+
+    // Tenure Toggle Logic [cite: 67]
+    btnMonths.addEventListener('click', () => {
+        if(tenureUnit === 'years') {
+            tenureUnit = 'months';
+            tenureVal.value = Math.round(tenureVal.value * 12);
+            tenureRange.max = 360;
+            tenureRange.value = tenureVal.value;
+            updateToggleUI();
+            calculate();
+        }
+    });
+
+    btnYears.addEventListener('click', () => {
+        if(tenureUnit === 'months') {
+            tenureUnit = 'years';
+            tenureVal.value = Math.round(tenureVal.value / 12);
+            tenureRange.max = 30;
+            tenureRange.value = tenureVal.value;
+            updateToggleUI();
+            calculate();
+        }
+    });
+
+    function updateToggleUI() {
+        btnMonths.classList.toggle('active', tenureUnit === 'months');
+        btnYears.classList.toggle('active', tenureUnit === 'years');
+    }
+
+    // EMI Calculation Core [cite: 27, 28]
+    function calculate() {
+        const P = parseFloat(amtVal.value);
+        const annualRate = parseFloat(rateVal.value);
+        const r = annualRate / 12 / 100;
+        const n = tenureUnit === 'years' ? parseInt(tenureVal.value) * 12 : parseInt(tenureVal.value);
+
+        if (!P || !n) return; // Allow rate 0
+
+        let emi, totalPayable, totalInterest;
+
+        if (r === 0) {
+            // Special case: no interest
+            emi = P / n;
+            totalPayable = P;
+            totalInterest = 0;
+        } else {
+            // Formula: P x r x (1+r)^n / ((1+r)^n - 1)
+            emi = P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+            totalPayable = emi * n;
+            totalInterest = totalPayable - P;
+        }
+
+        // Update UI Results
+        document.getElementById('emi-display').innerText = formatter.format(emi);
+        document.getElementById('res-principal').innerText = formatter.format(P);
+        document.getElementById('res-interest').innerText = formatter.format(totalInterest);
+        document.getElementById('res-total').innerText = formatter.format(totalPayable);
+
+        // Update Pie Chart [cite: 25]
+        updatePieChart(P, totalInterest, totalPayable);
+
+        // Update Tooltip
+        const pPercent = (P / totalPayable) * 100;
+        const iPercent = (totalInterest / totalPayable) * 100;
+        tooltip.innerHTML = `Principal: ${formatter.format(P)} (${pPercent.toFixed(1)}%)<br>Interest: ${formatter.format(totalInterest)} (${iPercent.toFixed(1)}%)`;
+
+        generateTable(P, r, n, emi);
+    }
+
+    // Pie Chart Update Function
+    function updatePieChart(principal, interest, total) {
+        const svg = pieChart;
+        svg.innerHTML = '';
+
+        const pAngle = (principal / total) * 360;
+        const iAngle = 360 - pAngle;
+        const radius = 90;
+        const centerX = 90, centerY = 90;
+
+        function describeArc(x, y, radius, startAngle, endAngle) {
+            const start = polarToCartesian(x, y, radius, endAngle);
+            const end = polarToCartesian(x, y, radius, startAngle);
+            const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+            return [
+                "M", start.x, start.y,
+                "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y,
+                "L", x, y,
+                "Z"
+            ].join(" ");
+        }
+
+        function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+            const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+            return {
+                x: centerX + (radius * Math.cos(angleInRadians)),
+                y: centerY + (radius * Math.sin(angleInRadians))
+            };
+        }
+
+        if (interest === 0) {
+            // Full principal circle
+            const principalPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            principalPath.setAttribute('d', describeArc(centerX, centerY, radius, 0, 360));
+            principalPath.setAttribute('fill', '#2E75B6');
+            svg.appendChild(principalPath);
+
+            // Principal label at center
+            const principalText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            principalText.setAttribute('x', centerX);
+            principalText.setAttribute('y', centerY);
+            principalText.setAttribute('text-anchor', 'middle');
+            principalText.setAttribute('dominant-baseline', 'middle');
+            principalText.setAttribute('fill', 'white');
+            principalText.setAttribute('font-size', '12px');
+            principalText.textContent = formatter.format(principal);
+            svg.appendChild(principalText);
+        } else {
+            // Principal slice
+            const principalPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            principalPath.setAttribute('d', describeArc(centerX, centerY, radius, 0, pAngle));
+            principalPath.setAttribute('fill', '#2E75B6');
+            svg.appendChild(principalPath);
+
+            // Interest slice
+            const interestPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            interestPath.setAttribute('d', describeArc(centerX, centerY, radius, pAngle, 360));
+            interestPath.setAttribute('fill', '#E67E22');
+            svg.appendChild(interestPath);
+
+            // Principal label
+            const pMidAngle = pAngle / 2;
+            const pTextPos = polarToCartesian(centerX, centerY, radius * 0.6, pMidAngle);
+            const principalText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            principalText.setAttribute('x', pTextPos.x);
+            principalText.setAttribute('y', pTextPos.y);
+            principalText.setAttribute('text-anchor', 'middle');
+            principalText.setAttribute('dominant-baseline', 'middle');
+            principalText.setAttribute('fill', 'white');
+            principalText.setAttribute('font-size', '12px');
+            principalText.textContent = formatter.format(principal);
+            svg.appendChild(principalText);
+
+            // Interest label
+            const iMidAngle = pAngle + (iAngle / 2);
+            const iTextPos = polarToCartesian(centerX, centerY, radius * 0.6, iMidAngle);
+            const interestText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            interestText.setAttribute('x', iTextPos.x);
+            interestText.setAttribute('y', iTextPos.y);
+            interestText.setAttribute('text-anchor', 'middle');
+            interestText.setAttribute('dominant-baseline', 'middle');
+            interestText.setAttribute('fill', 'white');
+            interestText.setAttribute('font-size', '12px');
+            interestText.textContent = formatter.format(interest);
+            svg.appendChild(interestText);
+        }
+    }
+    function generateTable(P, r, n, emi) {
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '';
+        
+        let balance = P;
+        let totalPrincipal = 0;
+        let totalInterest = 0;
+
+        for (let i = 1; i <= n; i++) {
+            let interest = balance * r;
+            let principal = emi - interest;
+            let closing = balance - principal;
+
+            if (i === n) closing = 0; // Precision fix for last row
+
+            const row = `<tr>
+                <td>${i}</td>
+                <td>${formatter.format(balance)}</td>
+                <td>${formatter.format(emi)}</td>
+                <td>${formatter.format(principal)}</td>
+                <td>${formatter.format(interest)}</td>
+                <td>${formatter.format(Math.max(0, closing))}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+
+            balance = closing;
+            totalPrincipal += principal;
+            totalInterest += interest;
+        }
+
+        // Total Row [cite: 32]
+        const footerRow = `<tr class="total-row">
+            <td>TOTAL</td>
+            <td>-</td>
+            <td>${formatter.format(emi * n)}</td>
+            <td>${formatter.format(totalPrincipal)}</td>
+            <td>${formatter.format(totalInterest)}</td>
+            <td>-</td>
+        </tr>`;
+        tbody.innerHTML += footerRow;
+    }
+
+    // Copy to Clipboard [cite: 70]
+    function copyEMI() {
+        const val = document.getElementById('emi-display').innerText.replace(/[^\d]/g, '');
+        navigator.clipboard.writeText(val);
+        
+        const toast = document.getElementById('toast');
+        toast.className = "show";
+        setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+    }
+
+    // Initial Run [cite: 80]
+    calculate();
+
+    // Tooltip Events
+    pieChart.addEventListener('mousemove', (e) => {
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 10) + 'px';
+        tooltip.style.top = (e.clientY + 10) + 'px';
+    });
+
+    pieChart.addEventListener('mouseout', () => {
+        tooltip.style.display = 'none';
+    });
+</script>
+
+</body>
+</html>
